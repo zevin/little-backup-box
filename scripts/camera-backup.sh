@@ -49,7 +49,7 @@ if [ $DISP = true ]; then
     oled r
     oled +a "Camera OK"
     oled +b "Working..."
-    sudo oled s 
+    sudo oled s
 fi
 
 # Obtain camera model
@@ -68,7 +68,7 @@ if [ $DISP = true ]; then
     oled r
     oled +a "Backup complete"
     oled +b "Shutdown"
-    sudo oled s 
+    sudo oled s
 fi
 # Shutdown
 if [ $DISP = true ]; then
