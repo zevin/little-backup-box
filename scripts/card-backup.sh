@@ -20,12 +20,12 @@
 CONFIG_DIR=$(dirname "$0")
 CONFIG="${CONFIG_DIR}/config.cfg"
 
-OLEDBIN="/home/$USER/source/ssd1306_rpi/oled"
+OLEDBIN="/home/pi/ssd1306_rpi/oled"
 
 source "$CONFIG"
 
 # st599 added debugging print outs
-if [ $DEBUG = true ]; then
+if [ "$DEBUG" = "true" ]; then
   echo "CARD BACKUP"
   echo "Config Parser"
   echo "  Storage device      $STORAGE_DEV"
@@ -61,21 +61,29 @@ if [ $DISP = true ]; then
     oled r
     oled +a "Shutdown active"
     oled +b "Insert storage"
-    sudo oled s 
+    sudo oled s
 fi
 
 # Wait for a USB storage device (e.g., a USB flash drive)
-if [ $DEBUG = true ]; then
+if [ "$DEBUG" = "true" ]; then
   echo "Awaiting Storage"
 fi
-STORAGE=$(ls /dev/* | grep "$STORAGE_DEV" | cut -d"/" -f3)
+# STORAGE=$(ls /dev/* | grep "$STORAGE_DEV" | cut -d"/" -f3)
+# while [ -z "${STORAGE}" ]
+# do
+#     sleep 1
+#     STORAGE=$(ls /dev/* | grep "$STORAGE_DEV" | cut -d"/" -f3)
+# done
+# # When the USB storage device is detected, mount it
+# sudo mount /dev/"$STORAGE_DEV" "$STORAGE_MOUNT_POINT"
+
+# Wait for a USB storage device (e.g., a USB flash drive)
+STORAGE=$(ls /media/storage/ | grep "UUID" )
 while [ -z "${STORAGE}" ]
 do
     sleep 1
-    STORAGE=$(ls /dev/* | grep "$STORAGE_DEV" | cut -d"/" -f3)
+    STORAGE=$(ls /media/storage/ | grep "UUID" )
 done
-# When the USB storage device is detected, mount it
-sudo mount /dev/"$STORAGE_DEV" "$STORAGE_MOUNT_POINT"
 sudo chmod a+rwx "$STORAGE_MOUNT_POINT"
 
 # Set the ACT LED to blink at 1000ms to indicate that the storage device has been mounted
@@ -93,20 +101,35 @@ fi
 
 # Wait for a card reader or a camera
 # takes first device found
-if [ $DEBUG = true ]; then
-  echo "Awaiting Card Reader"
-fi
-CARD_READER=($(ls /dev/* | grep "$CARD_DEV" | cut -d"/" -f3))
-until [ ! -z "${CARD_READER[0]}" ]
+# CARDS=("sda1" "sda2" "sdb1" "sdb2" "sdc1" "sdc2")
+# CARD=""
+# until [ ! -z "${CARD}" ]
+#   do
+#     sleep 1
+#     for c in ${CARDS[@]}; do
+#       set -x
+#       SIZE=$(udisksctl info -b /dev/$c | grep Size: | awk '{print $2}')
+#       if [ $SIZE -gt 1000 ] && [ $SIZE -lt 128000000000 ]
+#         CARD=$c
+#         break
+#       fi
+#     done
+# done
+CARD=""
+until [ ! -z "${CARD}" ]
   do
-  sleep 1
-  CARD_READER=($(ls /dev/* | grep "$CARD_DEV" | cut -d"/" -f3))
+    sleep 1
+    if [ -b "$CARD_MOUNT_POINT" ]; then
+      CARD="1"
+      break
+    fi
 done
 
-# If the card reader is detected, mount it and obtain its UUID
-if [ ! -z "${CARD_READER[0]}" ]; then
-  sudo mount /dev"/${CARD_READER[0]}" "$CARD_MOUNT_POINT"
+# mount /dev/"$CARD" "$CARD_MOUNT_POINT"
 
+# If the card reader is detected, mount it and obtain its UUID
+# if [ ! -z "${CARD}" ]; then
+if [ -b "$CARD_MOUNT_POINT" ]; then
   # Set the ACT LED to blink at 500ms to indicate that the card has been mounted
   sudo sh -c "echo 500 > /sys/class/leds/led0/delay_on"
 
@@ -118,7 +141,7 @@ if [ ! -z "${CARD_READER[0]}" ]; then
       sudo $OLEDBIN s
   # Cancel shutdown
   sudo shutdown -c
-  
+
   fi
 
   # Create  a .id random identifier file if doesn't exist
@@ -143,7 +166,7 @@ if [ ! -z "${CARD_READER[0]}" ]; then
     echo "Perform Backup"
   fi
   if [ $DISP = true ]; then
-    rsync -avh --info=progress2 --exclude "*.id" "$CARD_MOUNT_POINT"/ "$BACKUP_PATH" | /home/"$USER"/little-backup-box/scripts/oled-rsync-progress.sh exclude.txt
+    rsync -avh --info=progress2 --exclude "*.id" "$CARD_MOUNT_POINT"/ "$BACKUP_PATH" | /home/pi/little-backup-box/scripts/oled-rsync-progress.sh exclude.txt
   else
     rsync -avh --info=progress2 --exclude "*.id" "$CARD_MOUNT_POINT"/ "$BACKUP_PATH"
   fi
